@@ -1,9 +1,17 @@
 .idea
 .terraform/
-.claude/
+# .claude — ignore everything except the checked-in claudecoach skill
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/claudecoach/
 
 dist/
 
 aws_account_prep/terraform.tfvars
 
 PLAN*
+
+# personal telemetry journal — local only, not versioned
+claudecoach/journal/
+telemetry-notes/
