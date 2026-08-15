@@ -81,6 +81,15 @@ dist/raceIngestionProcessorLambda.zip: dist $(GO_FILES)
 .PHONY: build
 build: dist/apiLambda.zip dist/websocketLambda.zip dist/raceIngestionProcessorLambda.zip ## Build all Lambda deployment packages
 
+##@ Telemetry Coach
+
+dist/ibt: dist $(GO_FILES)
+	go build -o dist/ibt ./cmd/ibt
+	@echo "built dist/ibt — see claudecoach/README.md"
+
+.PHONY: ibt
+ibt: dist/ibt ## Build the iRacing telemetry coaching CLI (cmd/ibt)
+
 frontend/dist: $(FRONTEND_FILES) frontend/package.json frontend/package-lock.json frontend/index.html
 	cd frontend && npm ci && VITE_API_BASE_URL=$$(terraform -chdir=../terraform output -raw api_url) VITE_WS_BASE_URL=$$(terraform -chdir=../terraform output -raw ws_url) npm run build
 

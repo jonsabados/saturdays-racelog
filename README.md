@@ -66,13 +66,16 @@ flowchart TB
 │   ├── lambda-based-api/   # AWS Lambda handler (REST API)
 │   ├── race-ingestion-processor/ # SQS consumer for race data ingestion
 │   ├── standalone-api/     # Local development server
-│   └── websocket-lambda/   # WebSocket Lambda handler
+│   ├── websocket-lambda/   # WebSocket Lambda handler
+│   └── ibt/                # iRacing telemetry coaching CLI (local tool, not deployed)
 ├── correlation/            # Request correlation ID middleware
 ├── ingestion/              # Race data ingestion processing
 ├── iracing/                # iRacing API client and OAuth integration
 ├── store/                  # Data persistence layer (DynamoDB)
+├── telemetry/              # .ibt decoder + analysis core (used by cmd/ibt; reusable)
 ├── tracks/                 # Track data service (merges iRacing track info + assets)
 ├── ws/                     # WebSocket handler package
+├── claudecoach/            # Telemetry coaching: journal + docs (see claudecoach/README.md)
 ├── frontend/               # Vue 3 SPA
 ├── terraform/              # Infrastructure as Code
 ├── website/                # Static marketing site
@@ -228,6 +231,41 @@ A single-page application built with Vue 3, TypeScript, and Vite.
 | [`frontend/src/App.vue`](frontend/src/App.vue) | Root component |
 | [`frontend/src/router/index.ts`](frontend/src/router/index.ts) | Vue Router configuration |
 | [`frontend/src/views/HomeView.vue`](frontend/src/views/HomeView.vue) | Home page |
+
+## Telemetry Coaching (claudecoach)
+
+A local driving-analysis system, separate from the deployed app: a Go CLI decodes
+iRacing `.ibt` telemetry into driving metrics, and Claude — via the **`claudecoach`
+skill** ([`.claude/skills/claudecoach/SKILL.md`](.claude/skills/claudecoach/SKILL.md)) —
+interprets them through a blind-test coaching protocol, tracking improvement across
+sessions in a journal. Built in the main Go module (`cmd/ibt` + `telemetry/`) with an eye
+toward a future "upload telemetry → coaching" app feature. Full docs:
+[`claudecoach/README.md`](claudecoach/README.md).
+
+### Using the skill
+
+Ask Claude Code to review a session — e.g. *"look at my latest Mugello telemetry"* or
+*"am I improving at Suzuka?"* — and the `claudecoach` skill drives the workflow: locate
+the session and a fast reference lap, run the analysis, **hold its read while you state
+yours** (the blind test), then reveal and score, journal the session, and update trends.
+
+### Using the CLI directly
+
+```bash
+make ibt                       # build dist/ibt
+go run ./cmd/ibt summary      "<file.ibt>"                         # lap table + best flying lap
+go run ./cmd/ibt consistency  "<file.ibt>"                         # per-corner consistency, sector variance
+go run ./cmd/ibt compare      "<you>" <lap> "<ref>" <lap>          # position-aligned delta vs a reference
+go run ./cmd/ibt brake        "<you>" <lap> "<ref>" <lap>          # brake modulation per corner
+go run ./cmd/ibt section      "<you>" <lap> "<ref>" <lap> <lo> <hi># deep-dive a distance window
+go run ./cmd/ibt journal add    "<file.ibt>"                       # append a session summary
+go run ./cmd/ibt journal trends "<file.ibt | track>"              # cross-session trends
+```
+
+Corners, the flying-lap window, and sector splits are all derived from the data, so the
+tool works on any track/car. The journal lives in `claudecoach/journal/` (gitignored,
+local). See [`claudecoach/README.md`](claudecoach/README.md) for the full command
+reference and design notes.
 
 ## Infrastructure (Terraform)
 
